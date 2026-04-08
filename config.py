@@ -1,101 +1,78 @@
+"""
+全局配置收口模块。
+
+所有运行时参数、环境标识、业务阈值统一在此管理。
+应用各层通过 import config 获取配置值，禁止散落硬编码。
+"""
+
 import os
 from pathlib import Path
 
 BASE_DIR = Path(__file__).resolve().parent
 
-SECRET_KEY = "dev-insecure-change-me"
-DEBUG = True
-ALLOWED_HOSTS = ["localhost", "127.0.0.1"]
+# ---------- 运行环境 ----------
+ENV_MODE: str = os.getenv("ENV_MODE", "development")
+DEBUG: bool = os.getenv("DEBUG", "true").lower() in ("1", "true", "yes", "on")
+APP_SECRET_KEY: str = os.getenv("APP_SECRET_KEY", "dev-insecure-change-me")
+CORS_ALLOWED_ORIGINS: list[str] = [
+    o.strip()
+    for o in os.getenv("CORS_ALLOWED_ORIGINS", "http://localhost:3000").split(",")
+    if o.strip()
+]
 
-ENV_MODE = "development"
+# ---------- 关系型数据库（MySQL） ----------
+DB_USER: str = os.getenv("DB_USER", "root")
+DB_PASSWORD: str = os.getenv("DB_PASSWORD", "123456")
+DB_HOST: str = os.getenv("DB_HOST", "127.0.0.1")
+DB_PORT: int = int(os.getenv("DB_PORT", "3306"))
+DB_NAME: str = os.getenv("DB_NAME", "saas_chat_agent")
 
-USE_SQLITE = False
-DB_ENGINE = "django.db.backends.mysql"
-DB_NAME = "saas_chat_agent"
-DB_USER = "root"
-DB_PASSWORD = "123456"
-DB_HOST = "127.0.0.1"
-DB_PORT = 3306
+DATABASE_URL: str = os.getenv(
+    "DATABASE_URL",
+    f"mysql+asyncmy://{DB_USER}:{DB_PASSWORD}@{DB_HOST}:{DB_PORT}/{DB_NAME}?charset=utf8mb4",
+)
+DATABASE_URL_SYNC: str = os.getenv(
+    "DATABASE_URL_SYNC",
+    f"mysql+pymysql://{DB_USER}:{DB_PASSWORD}@{DB_HOST}:{DB_PORT}/{DB_NAME}?charset=utf8mb4",
+)
 
-LLM_API_BASE_URL = ""
-LLM_API_KEY = ""
-LLM_DEFAULT_MODEL = ""
+# ---------- Redis ----------
+REDIS_URL: str = os.getenv("REDIS_URL", "redis://127.0.0.1:6379/0")
 
-EMBEDDING_API_BASE_URL = ""
-EMBEDDING_API_KEY = ""
-EMBEDDING_DEFAULT_MODEL = ""
+# ---------- Celery 异步任务 ----------
+CELERY_BROKER_URL: str = os.getenv("CELERY_BROKER_URL", REDIS_URL)
+CELERY_RESULT_BACKEND: str = os.getenv("CELERY_RESULT_BACKEND", REDIS_URL)
 
-REDIS_URL = ""
-CELERY_BROKER_URL = ""
-CELERY_RESULT_BACKEND = ""
+# ---------- 大语言模型推理 ----------
+LLM_API_BASE_URL: str = os.getenv("LLM_API_BASE_URL", "")
+LLM_API_KEY: str = os.getenv("LLM_API_KEY", "")
+LLM_DEFAULT_MODEL: str = os.getenv("LLM_DEFAULT_MODEL", "")
 
-OBJECT_STORAGE_ENDPOINT = ""
-OBJECT_STORAGE_ACCESS_KEY = ""
-OBJECT_STORAGE_SECRET_KEY = ""
-OBJECT_STORAGE_BUCKET = ""
+# ---------- 嵌入模型 ----------
+EMBEDDING_API_BASE_URL: str = os.getenv("EMBEDDING_API_BASE_URL", "")
+EMBEDDING_API_KEY: str = os.getenv("EMBEDDING_API_KEY", "")
+EMBEDDING_DEFAULT_MODEL: str = os.getenv("EMBEDDING_DEFAULT_MODEL", "")
 
-LOCAL_OBJECT_STORAGE_ROOT = str(BASE_DIR / "local_object_storage")
+# ---------- 对象存储 ----------
+OBJECT_STORAGE_ENDPOINT: str = os.getenv("OBJECT_STORAGE_ENDPOINT", "")
+OBJECT_STORAGE_ACCESS_KEY: str = os.getenv("OBJECT_STORAGE_ACCESS_KEY", "")
+OBJECT_STORAGE_SECRET_KEY: str = os.getenv("OBJECT_STORAGE_SECRET_KEY", "")
+OBJECT_STORAGE_BUCKET: str = os.getenv("OBJECT_STORAGE_BUCKET", "")
+LOCAL_OBJECT_STORAGE_ROOT: str = os.getenv(
+    "LOCAL_OBJECT_STORAGE_ROOT", str(BASE_DIR / "local_object_storage")
+)
 
-VECTOR_DB_URL = ""
-VECTOR_DB_API_KEY = ""
+# ---------- 向量数据库 ----------
+VECTOR_DB_URL: str = os.getenv("VECTOR_DB_URL", "")
+VECTOR_DB_API_KEY: str = os.getenv("VECTOR_DB_API_KEY", "")
 
-INGEST_CHUNK_SIZE = 800
-INGEST_CHUNK_OVERLAP = 100
-INGEST_EMBED_BATCH_SIZE = 16
+# ---------- 离线流水线参数 ----------
+INGEST_CHUNK_SIZE: int = int(os.getenv("INGEST_CHUNK_SIZE", "800"))
+INGEST_CHUNK_OVERLAP: int = int(os.getenv("INGEST_CHUNK_OVERLAP", "100"))
+INGEST_EMBED_BATCH_SIZE: int = int(os.getenv("INGEST_EMBED_BATCH_SIZE", "16"))
 
-RETRIEVAL_TOP_K = 8
+# ---------- 在线检索参数 ----------
+RETRIEVAL_TOP_K: int = int(os.getenv("RETRIEVAL_TOP_K", "8"))
 
-INTERNAL_API_SECRET = "dev-internal-secret"
-
-if "DJANGO_SECRET_KEY" in os.environ:
-    SECRET_KEY = os.environ["DJANGO_SECRET_KEY"]
-if "DJANGO_DEBUG" in os.environ:
-    DEBUG = os.environ["DJANGO_DEBUG"].lower() in ("1", "true", "yes", "on")
-if "DJANGO_ALLOWED_HOSTS" in os.environ:
-    ALLOWED_HOSTS = [
-        h.strip()
-        for h in os.environ["DJANGO_ALLOWED_HOSTS"].split(",")
-        if h.strip()
-    ]
-if "USE_SQLITE" in os.environ:
-    USE_SQLITE = os.environ["USE_SQLITE"].lower() in ("1", "true", "yes", "on")
-for _k, _v in (
-    ("DB_ENGINE", DB_ENGINE),
-    ("DB_NAME", DB_NAME),
-    ("DB_USER", DB_USER),
-    ("DB_PASSWORD", DB_PASSWORD),
-    ("DB_HOST", DB_HOST),
-):
-    if _k in os.environ:
-        globals()[_k] = os.environ[_k]
-if "DB_PORT" in os.environ:
-    DB_PORT = int(os.environ["DB_PORT"])
-for _k in (
-    "LLM_API_BASE_URL",
-    "LLM_API_KEY",
-    "LLM_DEFAULT_MODEL",
-    "EMBEDDING_API_BASE_URL",
-    "EMBEDDING_API_KEY",
-    "EMBEDDING_DEFAULT_MODEL",
-    "REDIS_URL",
-    "CELERY_BROKER_URL",
-    "CELERY_RESULT_BACKEND",
-    "OBJECT_STORAGE_ENDPOINT",
-    "OBJECT_STORAGE_ACCESS_KEY",
-    "OBJECT_STORAGE_SECRET_KEY",
-    "OBJECT_STORAGE_BUCKET",
-    "VECTOR_DB_URL",
-    "VECTOR_DB_API_KEY",
-    "INTERNAL_API_SECRET",
-    "LOCAL_OBJECT_STORAGE_ROOT",
-):
-    if _k in os.environ:
-        globals()[_k] = os.environ[_k]
-if "INGEST_CHUNK_SIZE" in os.environ:
-    INGEST_CHUNK_SIZE = int(os.environ["INGEST_CHUNK_SIZE"])
-if "INGEST_CHUNK_OVERLAP" in os.environ:
-    INGEST_CHUNK_OVERLAP = int(os.environ["INGEST_CHUNK_OVERLAP"])
-if "INGEST_EMBED_BATCH_SIZE" in os.environ:
-    INGEST_EMBED_BATCH_SIZE = int(os.environ["INGEST_EMBED_BATCH_SIZE"])
-if "RETRIEVAL_TOP_K" in os.environ:
-    RETRIEVAL_TOP_K = int(os.environ["RETRIEVAL_TOP_K"])
+# ---------- 内部服务通信 ----------
+INTERNAL_API_SECRET: str = os.getenv("INTERNAL_API_SECRET", "dev-internal-secret")
