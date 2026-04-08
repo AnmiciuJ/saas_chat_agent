@@ -8,3 +8,4 @@ __pycache__/
 .vscode/
 *.log
 local_object_storage/
+config.py
