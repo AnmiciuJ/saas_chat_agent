@@ -2,14 +2,21 @@
 会话与消息业务逻辑层。
 """
 
+import logging
+from datetime import datetime, timezone
 from typing import AsyncGenerator
 
-from sqlalchemy import select
+from sqlalchemy import select, func
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.database import SyncSessionLocal
 from app.exceptions import NotFoundError
 from app.models.conversation import Conversation, ChatMessage
 from app.schemas.conversation import ConversationCreate, ChatMessageCreate
+from app.services.session_memory import push_message
+from app.services.usage import record_chat_usage
+
+logger = logging.getLogger(__name__)
 
 
 class ConversationService:
@@ -57,13 +64,98 @@ class ConversationService:
         payload: ChatMessageCreate,
     ) -> AsyncGenerator[str, None]:
         """
-        执行单轮对话编排，返回 SSE 流式生成器。
-
-        流程概要：
-        1. 持久化用户消息
-        2. 调用在线服务链路（意图识别 -> 检索 -> 重排 -> 推理）
-        3. 逐片段返回生成内容并最终持久化助手消息
+        执行单轮对话：持久化用户消息 -> 调用在线链路 -> 流式返回 -> 持久化助手消息。
         """
-        # TODO: 接入 online.pipeline 完成完整对话编排
-        yield "data: [对话编排尚未接入，此为占位响应]\n\n"
+        conv = await self._db.execute(
+            select(Conversation).where(
+                Conversation.id == conv_id,
+                Conversation.tenant_id == tenant_id,
+            )
+        )
+        conversation = conv.scalar_one_or_none()
+        if conversation is None:
+            raise NotFoundError("会话不存在")
+
+        next_seq = await self._next_sequence(conv_id)
+
+        user_msg = ChatMessage(
+            tenant_id=tenant_id,
+            conversation_id=conv_id,
+            sequence=next_seq,
+            role="user",
+            content=payload.content,
+        )
+        self._db.add(user_msg)
+        conversation.last_message_at = datetime.now(timezone.utc)
+        await self._db.flush()
+        await self._db.commit()
+
+        try:
+            push_message(tenant_id, conv_id, "user", payload.content)
+        except Exception:
+            logger.warning("Redis 写入用户消息失败", exc_info=True)
+
+        from online.pipeline import run_chat_pipeline
+
+        full_response: list[str] = []
+
+        async for chunk in run_chat_pipeline(
+            tenant_id=tenant_id,
+            conversation_id=conv_id,
+            user_message=payload.content,
+            knowledge_base_id=conversation.knowledge_base_id,
+        ):
+            full_response.append(chunk)
+            yield f"data: {chunk}\n\n"
+
         yield "data: [DONE]\n\n"
+
+        assistant_text = "".join(full_response)
+        self._save_assistant_message_sync(
+            tenant_id=tenant_id,
+            conv_id=conv_id,
+            sequence=next_seq + 1,
+            content=assistant_text,
+        )
+
+        try:
+            record_chat_usage(
+                tenant_id=tenant_id,
+                conversation_id=conv_id,
+                prompt_tokens=0,
+                completion_tokens=0,
+            )
+        except Exception:
+            logger.warning("用量记录失败", exc_info=True)
+
+    async def _next_sequence(self, conv_id: int) -> int:
+        result = await self._db.execute(
+            select(func.coalesce(func.max(ChatMessage.sequence), 0)).where(
+                ChatMessage.conversation_id == conv_id
+            )
+        )
+        return result.scalar() + 1
+
+    @staticmethod
+    def _save_assistant_message_sync(
+        tenant_id: int,
+        conv_id: int,
+        sequence: int,
+        content: str,
+    ) -> None:
+        """流式结束后同步写入助手消息（此时异步会话已释放）。"""
+        with SyncSessionLocal() as session:
+            msg = ChatMessage(
+                tenant_id=tenant_id,
+                conversation_id=conv_id,
+                sequence=sequence,
+                role="assistant",
+                content=content,
+            )
+            session.add(msg)
+            session.commit()
+
+        try:
+            push_message(tenant_id, conv_id, "assistant", content)
+        except Exception:
+            logger.warning("Redis 写入助手消息失败", exc_info=True)

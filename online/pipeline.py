@@ -1,7 +1,7 @@
 """
 在线对话编排主流程。
 
-职责：接收用户问题，协调意图识别、知识检索、重排序、记忆组装与大模型推理，
+接收用户问题，协调意图识别、知识检索、重排序、记忆组装与大模型推理，
 以流式方式返回生成片段。
 """
 
@@ -21,16 +21,7 @@ async def run_chat_pipeline(
     knowledge_base_id: int | None = None,
 ) -> AsyncGenerator[str, None]:
     """
-    执行完整的在线对话链路。
-
-    参数:
-        tenant_id: 当前租户标识
-        conversation_id: 会话标识
-        user_message: 用户原始输入
-        knowledge_base_id: 绑定的知识库标识（可选）
-
-    返回:
-        异步生成器，逐片段产出模型回复文本
+    执行完整的在线对话链路，返回异步生成器逐片段产出回复文本。
     """
     rewritten = await rewrite_query(user_message)
 

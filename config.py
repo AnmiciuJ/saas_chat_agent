@@ -37,34 +37,64 @@ DATABASE_URL_SYNC: str = os.getenv(
 )
 
 # ---------- Redis ----------
-REDIS_URL: str = os.getenv("REDIS_URL", "redis://127.0.0.1:6379/0")
+REDIS_HOST: str = os.getenv("REDIS_HOST", "127.0.0.1")
+REDIS_PORT: int = int(os.getenv("REDIS_PORT", "6379"))
+REDIS_DB: int = int(os.getenv("REDIS_DB", "0"))
+REDIS_PASSWORD: str = os.getenv("REDIS_PASSWORD", "")
+REDIS_URL: str = os.getenv(
+    "REDIS_URL",
+    f"redis://:{REDIS_PASSWORD}@{REDIS_HOST}:{REDIS_PORT}/{REDIS_DB}"
+    if REDIS_PASSWORD
+    else f"redis://{REDIS_HOST}:{REDIS_PORT}/{REDIS_DB}",
+)
 
 # ---------- Celery 异步任务 ----------
 CELERY_BROKER_URL: str = os.getenv("CELERY_BROKER_URL", REDIS_URL)
 CELERY_RESULT_BACKEND: str = os.getenv("CELERY_RESULT_BACKEND", REDIS_URL)
 
 # ---------- 大语言模型推理 ----------
-LLM_API_BASE_URL: str = os.getenv("LLM_API_BASE_URL", "")
-LLM_API_KEY: str = os.getenv("LLM_API_KEY", "")
-LLM_DEFAULT_MODEL: str = os.getenv("LLM_DEFAULT_MODEL", "")
+LLM_PROVIDERS: dict = {
+    "deepseek": {
+        "api_base_url": "https://api.deepseek.com/chat/completions",
+        "api_key": "sk-2bf9b9152dc844aa9b43faa1af42eb2e",
+        "default_model": "deepseek-reasoner",
+    },
+    "qwen3": {
+        "api_base_url": "https://dashscope.aliyuncs.com/compatible-mode/v1/chat/completions",
+        "api_key": "sk-29d2082367854da8b812142ee4598dc0",
+        "default_model": "qwen3.5-plus",
+    },
+}
+LLM_DEFAULT_PROVIDER: str = os.getenv("LLM_DEFAULT_PROVIDER", "deepseek")
 
 # ---------- 嵌入模型 ----------
-EMBEDDING_API_BASE_URL: str = os.getenv("EMBEDDING_API_BASE_URL", "")
-EMBEDDING_API_KEY: str = os.getenv("EMBEDDING_API_KEY", "")
-EMBEDDING_DEFAULT_MODEL: str = os.getenv("EMBEDDING_DEFAULT_MODEL", "")
+EMBEDDING_PROVIDERS: dict = {
+    "dashscope": {
+        "api_base_url": "https://dashscope.aliyuncs.com/compatible-mode/v1/embeddings",
+        "api_key": "sk-29d2082367854da8b812142ee4598dc0",
+        "default_model": "text-embedding-v3",
+        "vector_dimension": 1024,
+    },
+}
+EMBEDDING_DEFAULT_PROVIDER: str = os.getenv("EMBEDDING_DEFAULT_PROVIDER", "dashscope")
 
-# ---------- 对象存储 ----------
-OBJECT_STORAGE_ENDPOINT: str = os.getenv("OBJECT_STORAGE_ENDPOINT", "")
-OBJECT_STORAGE_ACCESS_KEY: str = os.getenv("OBJECT_STORAGE_ACCESS_KEY", "")
-OBJECT_STORAGE_SECRET_KEY: str = os.getenv("OBJECT_STORAGE_SECRET_KEY", "")
-OBJECT_STORAGE_BUCKET: str = os.getenv("OBJECT_STORAGE_BUCKET", "")
+# ---------- 对象存储（开发环境使用本地文件系统） ----------
+OBJECT_STORAGE_BACKEND: str = os.getenv("OBJECT_STORAGE_BACKEND", "local")
+OBJECT_STORAGE_ENDPOINT: str = os.getenv("OBJECT_STORAGE_ENDPOINT", "http://127.0.0.1:9000")
+OBJECT_STORAGE_ACCESS_KEY: str = os.getenv("OBJECT_STORAGE_ACCESS_KEY", "minioadmin")
+OBJECT_STORAGE_SECRET_KEY: str = os.getenv("OBJECT_STORAGE_SECRET_KEY", "minioadmin")
+OBJECT_STORAGE_BUCKET: str = os.getenv("OBJECT_STORAGE_BUCKET", "saas-chat-agent")
 LOCAL_OBJECT_STORAGE_ROOT: str = os.getenv(
     "LOCAL_OBJECT_STORAGE_ROOT", str(BASE_DIR / "local_object_storage")
 )
 
-# ---------- 向量数据库 ----------
-VECTOR_DB_URL: str = os.getenv("VECTOR_DB_URL", "")
-VECTOR_DB_API_KEY: str = os.getenv("VECTOR_DB_API_KEY", "")
+# ---------- 向量数据库（Milvus） ----------
+VECTOR_DB_HOST: str = os.getenv("VECTOR_DB_HOST", "127.0.0.1")
+VECTOR_DB_PORT: int = int(os.getenv("VECTOR_DB_PORT", "19530"))
+VECTOR_DB_URL: str = os.getenv(
+    "VECTOR_DB_URL", f"http://{VECTOR_DB_HOST}:{VECTOR_DB_PORT}"
+)
+VECTOR_DB_TOKEN: str = os.getenv("VECTOR_DB_TOKEN", "")
 
 # ---------- 离线流水线参数 ----------
 INGEST_CHUNK_SIZE: int = int(os.getenv("INGEST_CHUNK_SIZE", "800"))

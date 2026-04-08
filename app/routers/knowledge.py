@@ -15,6 +15,7 @@ from app.schemas.knowledge import (
 )
 from app.schemas.common import PagedResponse, PageParams, SuccessResponse
 from app.services.knowledge import KnowledgeService
+from app.services.quota import check_knowledge_base_quota, check_storage_quota
 
 router = APIRouter(prefix="/api/knowledge-bases", tags=["知识库管理"])
 
@@ -26,6 +27,7 @@ async def create_knowledge_base(
     db: AsyncSession = Depends(get_db),
 ):
     """创建知识库。"""
+    check_knowledge_base_quota(tenant_id)
     service = KnowledgeService(db)
     return await service.create_knowledge_base(tenant_id, payload)
 
@@ -48,6 +50,7 @@ async def upload_document(
     db: AsyncSession = Depends(get_db),
 ):
     """向指定知识库上传文档。"""
+    check_storage_quota(tenant_id)
     service = KnowledgeService(db)
     return await service.upload_document(tenant_id, kb_id, file)
 

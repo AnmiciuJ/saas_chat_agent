@@ -5,7 +5,7 @@
 from datetime import datetime
 from typing import Optional
 
-from sqlalchemy import BigInteger, Enum, ForeignKey, Integer, String, Text, JSON
+from sqlalchemy import BigInteger, Enum, ForeignKey, Integer, String, Text, JSON, func
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.models.base import Base, TimestampMixin
@@ -74,7 +74,7 @@ class TenantMembership(Base):
         default="member",
     )
     created_at: Mapped[datetime] = mapped_column(
-        server_default="CURRENT_TIMESTAMP", nullable=False
+        server_default=func.now(), nullable=False
     )
 
     tenant: Mapped["Tenant"] = relationship(back_populates="memberships")

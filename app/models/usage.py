@@ -7,7 +7,7 @@ from typing import Optional
 
 from sqlalchemy import (
     BigInteger, Date, Enum, ForeignKey, Integer, Numeric, String, JSON,
-    UniqueConstraint,
+    UniqueConstraint, func,
 )
 from sqlalchemy.orm import Mapped, mapped_column
 
@@ -51,7 +51,7 @@ class UsageDailyAggregate(Base):
     completion_tokens: Mapped[int] = mapped_column(BigInteger, nullable=False, default=0)
     storage_bytes: Mapped[int] = mapped_column(BigInteger, nullable=False, default=0)
     updated_at: Mapped[datetime] = mapped_column(
-        server_default="CURRENT_TIMESTAMP", nullable=False
+        server_default=func.now(), nullable=False
     )
 
     __table_args__ = (

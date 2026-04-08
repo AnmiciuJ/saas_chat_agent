@@ -7,7 +7,7 @@ from typing import Optional
 
 from sqlalchemy import (
     BigInteger, Enum, ForeignKey, Integer, String, Text, JSON,
-    UniqueConstraint,
+    UniqueConstraint, func,
 )
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
@@ -56,7 +56,7 @@ class KnowledgeBaseSnapshot(Base):
     notes: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
     created_by_user_id: Mapped[Optional[int]] = mapped_column(BigInteger, nullable=True)
     created_at: Mapped[datetime] = mapped_column(
-        server_default="CURRENT_TIMESTAMP", nullable=False
+        server_default=func.now(), nullable=False
     )
 
     knowledge_base: Mapped["KnowledgeBase"] = relationship(back_populates="snapshots")
@@ -123,7 +123,7 @@ class DocumentChunk(Base):
     snapshot_id: Mapped[Optional[int]] = mapped_column(BigInteger, nullable=True)
     metadata_: Mapped[Optional[dict]] = mapped_column("metadata", JSON, nullable=True)
     created_at: Mapped[datetime] = mapped_column(
-        server_default="CURRENT_TIMESTAMP", nullable=False
+        server_default=func.now(), nullable=False
     )
 
     document: Mapped["Document"] = relationship(back_populates="chunks")
@@ -174,7 +174,7 @@ class KnowledgeEntryChunk(Base):
     snapshot_id: Mapped[Optional[int]] = mapped_column(BigInteger, nullable=True)
     metadata_: Mapped[Optional[dict]] = mapped_column("metadata", JSON, nullable=True)
     created_at: Mapped[datetime] = mapped_column(
-        server_default="CURRENT_TIMESTAMP", nullable=False
+        server_default=func.now(), nullable=False
     )
 
     entry: Mapped["KnowledgeEntry"] = relationship(back_populates="chunks")

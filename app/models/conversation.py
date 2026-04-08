@@ -7,7 +7,7 @@ from typing import Optional
 
 from sqlalchemy import (
     BigInteger, Enum, ForeignKey, Integer, String, Text, JSON,
-    UniqueConstraint,
+    UniqueConstraint, func,
 )
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
@@ -94,7 +94,7 @@ class ChatMessage(Base):
     completion_tokens: Mapped[Optional[int]] = mapped_column(Integer, nullable=True)
     retrieval_refs: Mapped[Optional[dict]] = mapped_column(JSON, nullable=True)
     created_at: Mapped[datetime] = mapped_column(
-        server_default="CURRENT_TIMESTAMP", nullable=False
+        server_default=func.now(), nullable=False
     )
 
     conversation: Mapped["Conversation"] = relationship(back_populates="messages")
@@ -124,7 +124,7 @@ class ConversationMemoryChunk(Base):
     vector_point_id: Mapped[Optional[str]] = mapped_column(String(128), nullable=True)
     embedding_model_key: Mapped[Optional[str]] = mapped_column(String(128), nullable=True)
     created_at: Mapped[datetime] = mapped_column(
-        server_default="CURRENT_TIMESTAMP", nullable=False
+        server_default=func.now(), nullable=False
     )
 
     conversation: Mapped["Conversation"] = relationship(back_populates="memory_chunks")

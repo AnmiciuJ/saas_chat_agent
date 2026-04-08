@@ -14,6 +14,7 @@ from app.schemas.conversation import (
     ChatMessageOut,
 )
 from app.services.conversation import ConversationService
+from app.services.quota import check_chat_quota
 
 router = APIRouter(prefix="/api/conversations", tags=["会话管理"])
 
@@ -62,6 +63,7 @@ async def send_message(
 
     返回 SSE 流式响应，逐片段推送生成内容。
     """
+    check_chat_quota(tenant_id)
     service = ConversationService(db)
     generator = service.chat(tenant_id, conv_id, payload)
     return StreamingResponse(generator, media_type="text/event-stream")
